@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTP → CSV / XLSX Extractor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface2: #f0f0ec;
+    --border: #e2e2dc;
+    --text: #1a1a18;
+    --text-muted: #8a8a84;
+    --accent: #2563eb;
+    --accent-light: #eff4ff;
+    --accent2: #059669;
+    --accent2-light: #ecfdf5;
+    --warn: #d97706;
+    --warn-light: #fffbeb;
+    --danger: #dc2626;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: var(--text);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-mark svg { width: 20px; height: 20px; fill: none; stroke: white; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+  header p { font-size: 12px; color: var(--text-muted); }
+
+  .badge {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    letter-spacing: 0.05em;
+  }
+
+  main {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title .step-num {
+    width: 20px; height: 20px;
+    background: var(--text);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-light);
+  }
+  .dropzone.loaded {
+    border-color: var(--accent2);
+    background: var(--accent2-light);
+    border-style: solid;
+  }
+  .dropzone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .dropzone-icon { font-size: 32px; margin-bottom: 12px; }
+  .dropzone-label { font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .dropzone-sub { font-size: 12px; color: var(--text-muted); }
+  .dropzone-filename {
+    margin-top: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* Notice */
+  .notice {
+    padding: 14px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    margin-top: 12px;
+  }
+  .notice.info    { background: var(--accent-light);  border: 1px solid #bfdbfe; color: #1d4ed8; }
+  .notice.warn    { background: var(--warn-light);     border: 1px solid #fde68a; color: #92400e; }
+  .notice.success { background: var(--accent2-light);  border: 1px solid #a7f3d0; color: #065f46; }
+  .notice.error   { background: #fef2f2;               border: 1px solid #fecaca; color: var(--danger); }
+  .notice.visible { display: block; }
+
+  /* File meta pill row */
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .meta-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+  }
+  .meta-pill .label { color: var(--text-muted); }
+  .meta-pill .value { font-family: 'DM Mono', monospace; font-weight: 500; color: var(--text); }
+
+  /* Options */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .toggle-row:hover { border-color: var(--accent); }
+  .toggle-row.active { border-color: var(--accent); background: var(--accent-light); }
+  .toggle-row .tr-label { font-size: 13px; font-weight: 500; }
+  .toggle-row .tr-sub   { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .toggle-switch {
+    width: 36px; height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: left 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-row.active .toggle-switch { background: var(--accent); }
+  .toggle-row.active .toggle-switch::after { left: 19px; }
+
+
+  /* Filename options */
+  .filename-row {
+    margin-top: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .filename-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .filename-row-header .tr-label { font-size: 13px; font-weight: 500; }
+  .filename-row-header .tr-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .filename-preview {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 3px;
+    word-break: break-all;
+  }
+  .filename-fields {
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    background: var(--surface);
+  }
+  .fname-field { display: flex; flex-direction: column; gap: 5px; }
+  .fname-field label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .fname-field input, .fname-field select {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    color: var(--text);
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .fname-field input:focus, .fname-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: white;
+  }
+  .fname-field input::placeholder { color: var(--text-muted); }
+  .fname-full-row {
+    padding: 0 16px 14px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .fname-full-row label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .fname-full-row .fname-input-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .fname-full-row input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .fname-full-row input:focus {
+    outline: none; border-color: var(--accent); background: white;
+  }
+  .btn-reset-fname {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-reset-fname:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Precision selector */
+  .precision-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+  }
+  .precision-row label { font-size: 13px; font-weight: 500; flex: 1; }
+  .precision-row .pr-sub { font-size: 11px; color: var(--text-muted); }
+  .unit-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .unit-opt {
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .unit-opt:hover { color: var(--text); }
+  .unit-opt.active { background: var(--accent); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+
+  /* Process button */
+  .btn-convert {
+    width: 100%;
+    padding: 14px;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .btn-convert:hover { background: #2d2d2b; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .btn-convert:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* Progress */
+  .progress-wrap {
+    margin-top: 16px;
+    display: none;
+  }
+  .progress-wrap.visible { display: block; }
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-muted);
+  }
+
+  /* Results */
+  #results { display: none; flex-direction: column; gap: 20px; }
+  #results.visible { display: flex; }
+
+  /* Stat tiles */
+  .stat-tiles {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .stat-tile {
+    padding: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .stat-tile .st-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .stat-tile .st-lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+
+  /* Distribution bar */
+  .dist-bar-wrap { margin: 4px 0 8px; }
+  .dist-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .dist-seg { height: 100%; transition: width 0.5s ease; }
+  .dist-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .dist-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .dist-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Preview table */
+  .preview-wrap { overflow-x: auto; max-height: 300px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .td-id { color: var(--text-muted); }
+
+  /* VR color coding */
+  .vr-low    { color: #1d4ed8; }
+  .vr-med    { color: #059669; }
+  .vr-high   { color: #d97706; }
+  .vr-xhigh  { color: #dc2626; }
+
+  /* Download row */
+  .download-row { display: flex; gap: 12px; }
+  .btn-dl {
+    flex: 1;
+    padding: 13px 16px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.15s;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-dl-primary  { background: var(--accent);  color: white; border-color: var(--accent); }
+  .btn-dl-primary:hover  { background: #1d4ed8; }
+  .btn-dl-secondary { background: white; color: var(--text); border-color: var(--border); }
+  .btn-dl-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-dl-green { background: var(--accent2); color: white; border-color: var(--accent2); }
+  .btn-dl-green:hover { background: #047857; }
+
+  .sep { height: 1px; background: var(--border); }
+
+  .version-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border-radius: 4px;
+    border: 1px solid #bfdbfe;
+    vertical-align: middle;
+  }
+
+  .card.disabled { opacity: 0.45; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg viewBox="0 0 24 24">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+      <line x1="12" y1="22.08" x2="12" y2="12"/>
+    </svg>
+  </div>
+  <div>
+    <h1>VTP → CSV / XLSX Extractor</h1>
+    <p>Point coordinate &amp; scalar data extraction from VTK PolyData</p>
+  </div>
+  <span class="badge">v1.0 · VTP/VTK</span>
+</header>
+
+<main>
+
+  <!-- STEP 1: Upload -->
+  <div class="card" id="card-upload">
+    <div class="card-title"><span class="step-num">1</span> Upload VTP File</div>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".vtp">
+      <div class="dropzone-icon" id="dz-icon">📂</div>
+      <div class="dropzone-label" id="dz-label">Drop your .vtp file here</div>
+      <div class="dropzone-sub" id="dz-sub">or click to browse — processed entirely in browser, no upload</div>
+      <div class="dropzone-filename" id="dropzone-filename"></div>
+    </div>
+    <div class="notice" id="parse-notice"></div>
+    <div class="meta-row" id="meta-row" style="display:none;"></div>
+  </div>
+
+  <!-- STEP 2: Options -->
+  <div class="card disabled" id="card-options">
+    <div class="card-title"><span class="step-num">2</span> Export Options</div>
+
+    <div class="options-grid">
+      <div class="toggle-row active" id="tog-csv" onclick="toggleOpt('csv')">
+        <div>
+          <div class="tr-label">CSV export</div>
+          <div class="tr-sub">point_id, X, Y, Z, [scalars]</div>
+        </div>
+        <div class="toggle-switch" id="sw-csv"></div>
+      </div>
+      <div class="toggle-row active" id="tog-xlsx" onclick="toggleOpt('xlsx')">
+        <div>
+          <div class="tr-label">XLSX export</div>
+          <div class="tr-sub">Data sheet + summary stats sheet</div>
+        </div>
+        <div class="toggle-switch" id="sw-xlsx"></div>
+      </div>
+      <div class="toggle-row" id="tog-centroid" onclick="toggleOpt('centroid')">
+        <div>
+          <div class="tr-label">Include face centroids <span class="version-tag">if CellData</span></div>
+          <div class="tr-sub">Exports separate centroid CSV when CellData exists</div>
+        </div>
+        <div class="toggle-switch" id="sw-centroid"></div>
+      </div>
+      <div class="toggle-row" id="tog-coords" onclick="toggleOpt('coords')">
+        <div>
+          <div class="tr-label">Include all coordinate columns</div>
+          <div class="tr-sub">Always include X, Y, Z (even if Z is constant)</div>
+        </div>
+        <div class="toggle-switch" id="sw-coords"></div>
+      </div>
+    </div>
+
+    <div class="precision-row">
+      <div>
+        <div class="tr-label">Decimal precision</div>
+        <div class="pr-sub">Number of decimal places for all numeric values</div>
+      </div>
+      <div class="unit-toggle" id="precision-toggle">
+        <div class="unit-opt active" data-val="3" onclick="setPrecision(3)">3</div>
+        <div class="unit-opt" data-val="4" onclick="setPrecision(4)">4</div>
+        <div class="unit-opt" data-val="6" onclick="setPrecision(6)">6</div>
+        <div class="unit-opt" data-val="8" onclick="setPrecision(8)">8</div>
+      </div>
+    </div>
+
+    <div class="filename-row" id="filename-row">
+      <div class="filename-row-header">
+        <div>
+          <div class="tr-label">Output filename</div>
+          <div class="filename-preview" id="fname-preview">—</div>
+        </div>
+      </div>
+      <div class="filename-fields">
+        <div class="fname-field">
+          <label>Date</label>
+          <input type="text" id="fname-date" placeholder="20260313" maxlength="12" oninput="updateFilename()">
+        </div>
+        <div class="fname-field">
+          <label>Scalar / metric</label>
+          <select id="fname-scalar" onchange="updateFilename()">
+            <option value="WindSpeedRatio">WindSpeedRatio</option>
+            <option value="VR">VR</option>
+            <option value="WindSpeed">WindSpeed</option>
+            <option value="Pressure">Pressure</option>
+            <option value="Temperature">Temperature</option>
+            <option value="TurbulenceIntensity">TurbulenceIntensity</option>
+            <option value="">— custom —</option>
+          </select>
+        </div>
+        <div class="fname-field">
+          <label>Simulation type</label>
+          <select id="fname-simtype" onchange="updateFilename()">
+            <option value="PedestrianWind">PedestrianWind</option>
+            <option value="CFD">CFD</option>
+            <option value="Presentation">Presentation</option>
+            <option value="Comfort">Comfort</option>
+            <option value="">— custom —</option>
+          </select>
+        </div>
+        <div class="fname-field">
+          <label>Wind direction (°)</label>
+          <select id="fname-dir" onchange="updateFilename()">
+            <option value="">— omit —</option>
+            <option value="000">000 N</option>
+            <option value="022">022 NNE</option>
+            <option value="045">045 NE</option>
+            <option value="067">067 ENE</option>
+            <option value="090">090 E</option>
+            <option value="112">112 ESE</option>
+            <option value="135">135 SE</option>
+            <option value="157">157 SSE</option>
+            <option value="180">180 S</option>
+            <option value="202">202 SSW</option>
+            <option value="225">225 SW</option>
+            <option value="247">247 WSW</option>
+            <option value="270">270 W</option>
+            <option value="292">292 WNW</option>
+            <option value="315">315 NW</option>
+            <option value="337">337 NNW</option>
+          </select>
+        </div>
+        <div class="fname-field">
+          <label>Height (m)</label>
+          <input type="text" id="fname-height" placeholder="1.5" maxlength="6" oninput="updateFilename()">
+        </div>
+        <div class="fname-field">
+          <label>Tag / version</label>
+          <input type="text" id="fname-tag" placeholder="v1" maxlength="10" oninput="updateFilename()">
+        </div>
+      </div>
+      <div class="fname-full-row">
+        <label>Final filename (editable)</label>
+        <div class="fname-input-wrap">
+          <input type="text" id="fname-final" placeholder="filename" oninput="onFinalEdited()">
+          <button class="btn-reset-fname" onclick="rebuildFilename()">↺ Rebuild</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Extract -->
+  <div class="card disabled" id="card-extract">
+    <div class="card-title"><span class="step-num">3</span> Extract &amp; Export</div>
+    <button class="btn-convert" id="btn-extract" onclick="runExtract()" disabled>
+      Extract Data
+    </button>
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label">Parsing...</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <div class="card">
+      <div class="card-title">Scalar statistics</div>
+      <div class="stat-tiles" id="stat-tiles"></div>
+      <div class="sep" style="margin: 16px 0;"></div>
+      <div class="dist-bar-wrap">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; font-weight:500; text-transform:uppercase; letter-spacing:0.06em;">Value distribution</div>
+        <div class="dist-bar" id="dist-bar"></div>
+        <div class="dist-legend" id="dist-legend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Data preview <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:11px; margin-left:4px;" id="preview-count"></span></div>
+      <div class="preview-wrap">
+        <table id="preview-table">
+          <thead id="preview-head"></thead>
+          <tbody id="preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Download</div>
+      <div class="download-row" id="download-row"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- SheetJS for XLSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+
+// ─── Filename builder ─────────────────────────────────────────────────────────
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear().toString() +
+    String(d.getMonth()+1).padStart(2,'0') +
+    String(d.getDate()).padStart(2,'0');
+}
+
+function buildFilenameStem() {
+  const date    = document.getElementById('fname-date').value.trim();
+  const scalar  = document.getElementById('fname-scalar').value.trim();
+  const simtype = document.getElementById('fname-simtype').value.trim();
+  const dir     = document.getElementById('fname-dir').value.trim();
+  const height  = document.getElementById('fname-height').value.trim();
+  const tag     = document.getElementById('fname-tag').value.trim();
+  const parts = [date, scalar, simtype, dir ? `${dir}deg` : '', height ? `${height}m` : '', tag]
+    .filter(Boolean);
+  return parts.join('_');
+}
+
+function updateFilename() {
+  const stem = buildFilenameStem();
+  document.getElementById('fname-final').value = stem;
+  document.getElementById('fname-preview').textContent =
+    stem ? stem + '_points.csv / .xlsx' : '—';
+}
+
+function onFinalEdited() {
+  const val = document.getElementById('fname-final').value.trim();
+  document.getElementById('fname-preview').textContent =
+    val ? val + '_points.csv / .xlsx' : '—';
+}
+
+function rebuildFilename() {
+  updateFilename();
+}
+
+function getOutputStem(fallback) {
+  const v = document.getElementById('fname-final').value.trim();
+  return v || fallback;
+}
+
+// Initialise date field on page load
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fname-date').value = todayStr();
+  updateFilename();
+});
+
+// Also auto-detect scalar name and direction from VTP filename when file loads
+function autofillFromVTPName(fname) {
+  const base = fname.replace(/\.vtp$/i, '');
+  // Try to detect wind direction (e.g. 22_5 → 022, 225, 045 etc.)
+  const dirMatch = base.match(/_(\d{1,3}(?:_\d)?)\s*(?:deg|°|$|_)/i);
+  if (dirMatch) {
+    // normalise e.g. 22_5 → 22.5 → round to nearest 22.5° bracket
+    const raw = parseFloat(dirMatch[1].replace('_','.'));
+    const dirs = [0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337];
+    const closest = dirs.reduce((a,b) => Math.abs(b-raw)<Math.abs(a-raw)?b:a);
+    const sel = document.getElementById('fname-dir');
+    for (const opt of sel.options) {
+      if (parseInt(opt.value) === closest) { sel.value = opt.value; break; }
+    }
+  }
+  // Try to detect scalar name
+  const scalarSel = document.getElementById('fname-scalar');
+  for (const opt of scalarSel.options) {
+    if (opt.value && base.toLowerCase().includes(opt.value.toLowerCase())) {
+      scalarSel.value = opt.value; break;
+    }
+  }
+  updateFilename();
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let state = {
+  file: null,
+  parsed: null,
+  opts: { csv: true, xlsx: true, centroid: false, coords: true },
+  precision: 3,
+  csvBlob: null,
+  xlsxBlob: null,
+};
+
+// ─── Toggle helpers ───────────────────────────────────────────────────────────
+function toggleOpt(key) {
+  state.opts[key] = !state.opts[key];
+  document.getElementById('tog-' + key).classList.toggle('active', state.opts[key]);
+}
+function setPrecision(val) {
+  state.precision = val;
+  document.querySelectorAll('#precision-toggle .unit-opt').forEach(el =>
+    el.classList.toggle('active', parseInt(el.dataset.val) === val));
+}
+
+// ─── Dropzone ─────────────────────────────────────────────────────────────────
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.vtp')) { showNotice('parse-notice','error','⚠️ Please upload a .vtp file.'); return; }
+  state.file = file;
+  document.getElementById('dropzone-filename').textContent = file.name;
+  autofillFromVTPName(file.name);
+  showNotice('parse-notice','info',`⏳ Reading ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)…`);
+  const reader = new FileReader();
+  reader.onload = e => parseVTP(e.target.result, file.name).catch(err => {
+    showNotice('parse-notice','error','❌ Parse error: ' + err.message);
+    console.error(err);
+  });
+  reader.readAsText(file);
+}
+
+// ─── Native zlib decompression via DecompressionStream ───────────────────────
+async function inflate(data) {
+  // VTK blocks are standard zlib streams (0x789c header) → use 'deflate' mode
+  const ds = new DecompressionStream('deflate');
+  const writer = ds.writable.getWriter();
+  const reader = ds.readable.getReader();
+  writer.write(data);
+  writer.close();
+  const chunks = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  return concatUint8(chunks);
+}
+
+// ─── Base64 helpers ───────────────────────────────────────────────────────────
+// Manual base64 decoder — avoids atob() entirely (atob is strict/legacy and breaks
+// on any padding edge cases). Handles any whitespace, any padding situation.
+const B64_LUT = new Uint8Array(256).fill(255);
+'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  .split('').forEach((c, i) => { B64_LUT[c.charCodeAt(0)] = i; });
+
+function b64ToUint8Array(b64) {
+  // Strip all whitespace and padding
+  let s = '';
+  for (let i = 0; i < b64.length; i++) {
+    const v = B64_LUT[b64.charCodeAt(i)];
+    if (v !== 255) s += b64[i]; // keep only valid base64 chars, skip = and whitespace
+  }
+  const len = Math.floor(s.length * 3 / 4);
+  const out = new Uint8Array(len);
+  let o = 0;
+  for (let i = 0; i < s.length; i += 4) {
+    const a = B64_LUT[s.charCodeAt(i)];
+    const b = B64_LUT[s.charCodeAt(i+1)];
+    const c = i+2 < s.length ? B64_LUT[s.charCodeAt(i+2)] : 0;
+    const d = i+3 < s.length ? B64_LUT[s.charCodeAt(i+3)] : 0;
+    out[o++] = (a << 2) | (b >> 4);
+    if (i+2 < s.length) out[o++] = ((b & 0xf) << 4) | (c >> 2);
+    if (i+3 < s.length) out[o++] = ((c & 0x3) << 6) | d;
+  }
+  return out.slice(0, o);
+}
+
+function splitBase64Streams(b64) {
+  // b64 is already whitespace-stripped.
+  // VTK sometimes stores header and data as two concatenated base64 streams.
+  // Detect by finding == padding NOT at the very end of the string.
+  const eq = b64.indexOf('==');
+  if (eq === -1 || eq >= b64.length - 2) return [b64]; // no mid-stream ==
+  // Confirm next char after == is a valid base64 character (not end of string)
+  const next = B64_LUT[b64.charCodeAt(eq + 2)];
+  if (next === 255) return [b64]; // = at end, not a split point
+  return [b64.slice(0, eq + 2), b64.slice(eq + 2)];
+}
+
+function readUInt32LE(buf, off) {
+  return (buf[off] | buf[off+1]<<8 | buf[off+2]<<16 | buf[off+3]<<24) >>> 0;
+}
+
+// ─── VTK multi-block zlib decoder (async) ────────────────────────────────────
+async function decodeVTKData(raw) {
+  // nblocks=0 means empty array
+  const nblocks = readUInt32LE(raw, 0);
+  if (nblocks === 0) return new Uint8Array(0);
+  const headerSize = (3 + nblocks) * 4;
+  const compSizes = [];
+  for (let i = 0; i < nblocks; i++) compSizes.push(readUInt32LE(raw, (3+i)*4));
+  let offset = headerSize;
+  const parts = [];
+  for (const cs of compSizes) {
+    parts.push(await inflate(raw.slice(offset, offset + cs)));
+    offset += cs;
+  }
+  return concatUint8(parts);
+}
+
+async function decodeVTKDataSplit(headerRaw, dataRaw) {
+  const nblocks = readUInt32LE(headerRaw, 0);
+  if (nblocks === 0) return new Uint8Array(0);
+  const compSizes = [];
+  for (let i = 0; i < nblocks; i++) compSizes.push(readUInt32LE(headerRaw, (3+i)*4));
+  let offset = 0;
+  const parts = [];
+  for (const cs of compSizes) {
+    parts.push(await inflate(dataRaw.slice(offset, offset + cs)));
+    offset += cs;
+  }
+  return concatUint8(parts);
+}
+
+// ─── DataArray decoder ────────────────────────────────────────────────────────
+async function decodeDataArray(da, defaultType, defaultNcomp, forceFlat=false) {
+  const type   = da.getAttribute('type') || defaultType;
+  const format = da.getAttribute('format') || 'binary';
+  const nc     = parseInt(da.getAttribute('NumberOfComponents') || defaultNcomp || '1');
+  const rawText = da.textContent;
+
+  if (format === 'ascii') {
+    const vals = rawText.trim().split(/\s+/).map(Number);
+    return nc > 1 ? reshapeFlat(vals, nc) : vals;
+  }
+
+  // Strip ALL whitespace — atob() rejects any whitespace
+  const text = rawText.replace(/\s+/g, '');
+  if (!text) return nc > 1 ? [] : new Float32Array(0);
+
+  const streams = splitBase64Streams(text);
+  let bytes;
+  if (streams.length === 1) {
+    bytes = await decodeVTKData(b64ToUint8Array(streams[0]));
+  } else {
+    bytes = await decodeVTKDataSplit(b64ToUint8Array(streams[0]), b64ToUint8Array(streams[1]));
+  }
+
+  if (bytes.length === 0) return nc > 1 ? [] : new Float32Array(0);
+
+  const typedArr = toTypedArray(bytes, type);
+  return (!forceFlat && nc > 1) ? reshapeTyped(typedArr, nc) : typedArr;
+}
+
+function toTypedArray(bytes, type) {
+  const map = { Float32: Float32Array, Float64: Float64Array, Int32: Int32Array,
+                Int64: Float64Array,   Int8: Int8Array,       UInt8: Uint8Array, UInt32: Uint32Array };
+  const Ctor = map[type] || Float32Array;
+  const bpe  = Ctor.BYTES_PER_ELEMENT;
+  const buf  = bytes.buffer;
+  const off  = bytes.byteOffset;
+  const len  = Math.floor(bytes.byteLength / bpe);
+  try { return new Ctor(buf, off, len); }
+  catch(e) {
+    const aligned = new Uint8Array(bytes.length);
+    aligned.set(bytes);
+    return new Ctor(aligned.buffer, 0, Math.floor(aligned.byteLength / bpe));
+  }
+}
+
+function reshapeFlat(flat, nc) {
+  const rows = [];
+  for (let i = 0; i < flat.length; i += nc) rows.push(flat.slice(i, i + nc));
+  return rows;
+}
+function reshapeTyped(arr, nc) {
+  const rows = [];
+  for (let i = 0; i < arr.length; i += nc) rows.push(Array.from(arr.subarray ? arr.subarray(i, i+nc) : arr.slice(i, i+nc)));
+  return rows;
+}
+
+function concatUint8(arrays) {
+  const total = arrays.reduce((s,a) => s + a.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrays) { out.set(a, off); off += a.length; }
+  return out;
+}
+
+// ─── VTP Parser (async) ───────────────────────────────────────────────────────
+async function parseVTP(xmlText, fname) {
+  const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+  const parseErr = doc.querySelector('parsererror');
+  if (parseErr) throw new Error('XML parse error: ' + parseErr.textContent.slice(0, 100));
+
+  const piece = doc.querySelector('Piece');
+  if (!piece) throw new Error('No <Piece> element found — is this a valid VTP file?');
+
+  const nPoints = parseInt(piece.getAttribute('NumberOfPoints'));
+  const nPolys  = parseInt(piece.getAttribute('NumberOfPolys'));
+
+  setProgress(10, 'Decoding points…');
+  const pointsDA = piece.querySelector('Points DataArray');
+  const pointsFlat = await decodeDataArray(pointsDA, 'Float32', 1, true);
+
+  setProgress(30, 'Decoding scalar data…');
+  const scalars = {};
+  for (const da of piece.querySelectorAll('PointData DataArray')) {
+    const name = da.getAttribute('Name');
+    scalars[name] = await decodeDataArray(da, 'Float32', 1);
+  }
+
+  setProgress(50, 'Decoding cell data…');
+  const cellScalars = {};
+  for (const da of piece.querySelectorAll('CellData DataArray')) {
+    const name = da.getAttribute('Name');
+    cellScalars[name] = await decodeDataArray(da, 'Float32', 1);
+  }
+
+  state.parsed = { fname, nPoints, nPolys, pointsFlat, scalars, cellScalars };
+  setProgress(100, 'Done.');
+  showProgress(false);
+  onParsed();
+}
+
+// ─── After parse ──────────────────────────────────────────────────────────────
+function onParsed() {
+  const p = state.parsed;
+  const pts = p.pointsFlat;
+
+  showNotice('parse-notice', 'success',
+    `✓ Parsed — ${p.nPoints.toLocaleString()} vertices · ${p.nPolys.toLocaleString()} polygons · ` +
+    `${Object.keys(p.scalars).length} PointData array(s)` +
+    (Object.keys(p.cellScalars).length ? ` · ${Object.keys(p.cellScalars).length} CellData` : '') + '.');
+
+  // Coord ranges
+  let xMin=Infinity,xMax=-Infinity,yMin=Infinity,yMax=-Infinity,zMin=Infinity,zMax=-Infinity;
+  for (let i = 0; i < pts.length; i+=3) {
+    const x=pts[i],y=pts[i+1],z=pts[i+2];
+    if(x<xMin)xMin=x; if(x>xMax)xMax=x;
+    if(y<yMin)yMin=y; if(y>yMax)yMax=y;
+    if(z<zMin)zMin=z; if(z>zMax)zMax=z;
+  }
+
+  const mr = document.getElementById('meta-row');
+  mr.style.display = 'flex';
+  const pills = [
+    ['Vertices', p.nPoints.toLocaleString()],
+    ['Polygons', p.nPolys.toLocaleString()],
+    ['X range', `${xMin.toFixed(1)} → ${xMax.toFixed(1)} m`],
+    ['Y range', `${yMin.toFixed(1)} → ${yMax.toFixed(1)} m`],
+    ['Z range', `${zMin.toFixed(1)} → ${zMax.toFixed(1)} m`],
+    ['PointData', Object.keys(p.scalars).join(', ') || '—'],
+    ['CellData',  Object.keys(p.cellScalars).join(', ') || '—'],
+  ];
+  mr.innerHTML = pills.map(([l,v]) =>
+    `<div class="meta-pill"><span class="label">${l}</span><span class="value">${v}</span></div>`
+  ).join('');
+
+  dz.classList.add('loaded');
+  document.getElementById('dz-icon').textContent = '✅';
+  document.getElementById('dz-label').textContent = p.fname;
+  document.getElementById('dz-sub').textContent =
+    `${p.nPoints.toLocaleString()} points · ${(state.file.size/1024/1024).toFixed(1)} MB`;
+
+  document.getElementById('card-options').classList.remove('disabled');
+  document.getElementById('card-extract').classList.remove('disabled');
+  document.getElementById('btn-extract').disabled = false;
+
+  if (!Object.keys(p.cellScalars).length) {
+    const tc = document.getElementById('tog-centroid');
+    tc.style.opacity = '0.4'; tc.style.pointerEvents = 'none';
+  }
+}
+
+// ─── Extract ──────────────────────────────────────────────────────────────────
+function runExtract() {
+  const p = state.parsed;
+  if (!p) return;
+  const btn = document.getElementById('btn-extract');
+  btn.disabled = true; btn.textContent = 'Processing…';
+  showProgress(true);
+  setProgress(5, 'Building rows…');
+
+  // Use setTimeout to let the UI update, then process
+  setTimeout(async () => {
+    try {
+      const rows = buildRows(p);
+      setProgress(40, 'Building CSV…');
+      if (state.opts.csv) buildCSV(rows);
+      setProgress(65, 'Building XLSX…');
+      if (state.opts.xlsx) buildXLSX(rows, p);
+      setProgress(90, 'Rendering preview…');
+      renderResults(rows, p);
+      setProgress(100, 'Done.');
+      showProgress(false);
+      btn.disabled = false; btn.textContent = 'Re-extract';
+    } catch(err) {
+      showNotice('parse-notice','error','❌ Export error: ' + err.message);
+      console.error(err);
+      btn.disabled = false; btn.textContent = 'Extract Data';
+      showProgress(false);
+    }
+  }, 50);
+}
+
+function buildRows(p) {
+  const pts = p.pointsFlat;
+  const scalarNames = Object.keys(p.scalars);
+  const n = p.nPoints;
+  const prec = state.precision;
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    const row = {
+      point_id: i,
+      X: +Number(pts[i*3]).toFixed(prec),
+      Y: +Number(pts[i*3+1]).toFixed(prec),
+      Z: +Number(pts[i*3+2]).toFixed(prec),
+    };
+    for (const name of scalarNames) {
+      const arr = p.scalars[name];
+      if (Array.isArray(arr) && Array.isArray(arr[0])) {
+        arr[i].forEach((v,j) => { row[`${name}_${'xyz'[j]||j}`] = +v.toFixed(prec); });
+      } else {
+        row[name] = +Number(arr[i]).toFixed(prec);
+      }
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function buildCSV(rows) {
+  const cols = Object.keys(rows[0]);
+  const lines = [cols.join(',')];
+  for (const r of rows) lines.push(cols.map(c => r[c]).join(','));
+  state.csvBlob = new Blob([lines.join('\n')], { type: 'text/csv' });
+}
+
+function buildXLSX(rows, p) {
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.json_to_sheet(rows);
+  const cols = Object.keys(rows[0]);
+  ws1['!cols'] = cols.map(c => ({ wch: Math.max(c.length, 8) + 2 }));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Point Data');
+
+  // Summary sheet
+  const scalarNames = Object.keys(p.scalars).filter(n => !Array.isArray(p.scalars[n][0]));
+  const sumRows = [['File', p.fname], ['Vertices', p.nPoints], ['Polygons', p.nPolys], ['']];
+  for (const name of scalarNames) {
+    const arr = p.scalars[name];
+    const vals = Array.from(arr);
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+    const sorted = [...vals].sort((a,b)=>a-b);
+    const std = Math.sqrt(vals.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/vals.length);
+    sumRows.push([`── ${name} ──`,''],[' Min',+mn.toFixed(6)],[' Max',+mx.toFixed(6)],
+      [' Mean',+mean.toFixed(6)],[' Median',+sorted[Math.floor(sorted.length/2)].toFixed(6)],
+      [' Std Dev',+std.toFixed(6)],[' P25',+sorted[Math.floor(sorted.length*.25)].toFixed(6)],
+      [' P75',+sorted[Math.floor(sorted.length*.75)].toFixed(6)],['']);
+  }
+  const ws2 = XLSX.utils.aoa_to_sheet(sumRows);
+  ws2['!cols'] = [{wch:24},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+
+  const out = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+  state.xlsxBlob = new Blob([out], { type:'application/octet-stream' });
+}
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+function renderResults(rows, p) {
+  const scalarNames = Object.keys(p.scalars).filter(n => !Array.isArray(p.scalars[n][0]));
+  const results = document.getElementById('results');
+  results.classList.add('visible');
+
+  if (!scalarNames.length) return;
+
+  const primaryName = scalarNames[0];
+  const arr = p.scalars[primaryName];
+  const vals = Array.from(arr);
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const mean = vals.reduce((a,b)=>a+b,0)/vals.length;
+  const sorted = [...vals].sort((a,b)=>a-b);
+  const median = sorted[Math.floor(sorted.length/2)];
+  const std = Math.sqrt(vals.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/vals.length);
+
+  document.getElementById('stat-tiles').innerHTML = [
+    ['Min',mn],['Max',mx],['Mean',mean],['Median',median],['Std Dev',std]
+  ].map(([l,v]) => `<div class="stat-tile"><div class="st-val">${v.toFixed(4)}</div><div class="st-lbl">${l}</div></div>`).join('');
+
+  const range = mx - mn || 1;
+  const bands = [
+    { label:`< ${(mn+range*.25).toFixed(2)}`, color:'#3b82f6', max: mn+range*.25 },
+    { label:`${(mn+range*.25).toFixed(2)}–${(mn+range*.5).toFixed(2)}`, color:'#10b981', max: mn+range*.5 },
+    { label:`${(mn+range*.5).toFixed(2)}–${(mn+range*.75).toFixed(2)}`, color:'#f59e0b', max: mn+range*.75 },
+    { label:`> ${(mn+range*.75).toFixed(2)}`, color:'#ef4444', max: Infinity },
+  ];
+  let prev = 0;
+  const bandCounts = bands.map(b => { const c = vals.filter(v=>v<=b.max).length - prev; prev += c; return c; });
+
+  document.getElementById('dist-bar').innerHTML = bands.map((b,i) => {
+    const pct = (bandCounts[i]/vals.length*100).toFixed(1);
+    return `<div class="dist-seg" style="width:${pct}%;background:${b.color}" title="${b.label}: ${pct}%"></div>`;
+  }).join('');
+  document.getElementById('dist-legend').innerHTML = bands.map((b,i) => {
+    const pct = (bandCounts[i]/vals.length*100).toFixed(1);
+    return `<div class="dist-item"><div class="dist-dot" style="background:${b.color}"></div>${b.label} — ${pct}%</div>`;
+  }).join('');
+
+  // Preview
+  const cols = Object.keys(rows[0]);
+  document.getElementById('preview-head').innerHTML =
+    '<tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+  document.getElementById('preview-body').innerHTML = rows.slice(0,50).map(row =>
+    '<tr>' + cols.map(c => {
+      const v = row[c];
+      if (c === 'point_id') return `<td class="td-id">${v}</td>`;
+      if (scalarNames.includes(c)) {
+        const norm = (v - mn) / range;
+        const cls = norm<.25?'vr-low':norm<.5?'vr-med':norm<.75?'vr-high':'vr-xhigh';
+        return `<td class="${cls}">${v}</td>`;
+      }
+      return `<td>${v}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+  document.getElementById('preview-count').textContent =
+    `(showing 50 of ${rows.length.toLocaleString()} rows)`;
+
+  // Downloads
+  const dlRow = document.getElementById('download-row');
+  dlRow.innerHTML = '';
+  const stem = p.fname.replace(/\.vtp$/i,'');
+  const dlIcon = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+  if (state.opts.csv && state.csvBlob) {
+    const b = document.createElement('button');
+    b.className = 'btn-dl btn-dl-primary';
+    b.innerHTML = dlIcon + ' Download CSV';
+    b.onclick = () => triggerDownload(state.csvBlob, stem + '_points.csv');
+    dlRow.appendChild(b);
+  }
+  if (state.opts.xlsx && state.xlsxBlob) {
+    const b = document.createElement('button');
+    b.className = 'btn-dl btn-dl-green';
+    b.innerHTML = dlIcon + ' Download XLSX';
+    b.onclick = () => triggerDownload(state.xlsxBlob, stem + '_points.xlsx');
+    dlRow.appendChild(b);
+  }
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+function showNotice(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = `notice ${type} visible`;
+  el.textContent = msg;
+}
+function setProgress(pct, label) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+function showProgress(show) {
+  document.getElementById('progress-wrap').classList.toggle('visible', show);
+  if (show) {
+    document.getElementById('progress-wrap').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>
