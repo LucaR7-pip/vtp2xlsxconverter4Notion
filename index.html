@@ -222,112 +222,6 @@
   .toggle-row.active .toggle-switch { background: var(--accent); }
   .toggle-row.active .toggle-switch::after { left: 19px; }
 
-
-  /* Filename options */
-  .filename-row {
-    margin-top: 16px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .filename-row-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-  }
-  .filename-row-header .tr-label { font-size: 13px; font-weight: 500; }
-  .filename-row-header .tr-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
-  .filename-preview {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--accent);
-    margin-top: 3px;
-    word-break: break-all;
-  }
-  .filename-fields {
-    padding: 14px 16px;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    background: var(--surface);
-  }
-  .fname-field { display: flex; flex-direction: column; gap: 5px; }
-  .fname-field label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .fname-field input, .fname-field select {
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    background: var(--surface2);
-    color: var(--text);
-    transition: border-color 0.15s;
-    width: 100%;
-  }
-  .fname-field input:focus, .fname-field select:focus {
-    outline: none;
-    border-color: var(--accent);
-    background: white;
-  }
-  .fname-field input::placeholder { color: var(--text-muted); }
-  .fname-full-row {
-    padding: 0 16px 14px;
-    background: var(--surface);
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .fname-full-row label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .fname-full-row .fname-input-wrap {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .fname-full-row input {
-    flex: 1;
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    background: var(--surface2);
-    color: var(--text);
-    transition: border-color 0.15s;
-  }
-  .fname-full-row input:focus {
-    outline: none; border-color: var(--accent); background: white;
-  }
-  .btn-reset-fname {
-    padding: 6px 12px;
-    font-size: 11px;
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 500;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface2);
-    color: var(--text-muted);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-  .btn-reset-fname:hover { border-color: var(--accent); color: var(--accent); }
-
   /* Precision selector */
   .precision-row {
     display: flex;
@@ -534,6 +428,29 @@
     vertical-align: middle;
   }
 
+
+  /* Debug log panel */
+  #debug-panel {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    color: #e6edf3;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .dlog-time { color: #6e7681; }
+  .dlog-ok   { color: #3fb950; }
+  .dlog-warn { color: #d29922; }
+  .dlog-err  { color: #f85149; }
+  .dlog-info { color: #58a6ff; }
+  .dlog-bytes { color: #a5d6ff; }
+  #debug-card { display: none; }
+  #debug-card.visible { display: block; }
+
   .card.disabled { opacity: 0.45; pointer-events: none; }
 </style>
 </head>
@@ -551,7 +468,7 @@
     <h1>VTP → CSV / XLSX Extractor</h1>
     <p>Point coordinate &amp; scalar data extraction from VTK PolyData</p>
   </div>
-  <span class="badge">v1.0 · VTP/VTK</span>
+  <span class="badge">v1.0.1 · VTP/VTK</span>
 </header>
 
 <main>
@@ -617,80 +534,6 @@
         <div class="unit-opt" data-val="8" onclick="setPrecision(8)">8</div>
       </div>
     </div>
-
-    <div class="filename-row" id="filename-row">
-      <div class="filename-row-header">
-        <div>
-          <div class="tr-label">Output filename</div>
-          <div class="filename-preview" id="fname-preview">—</div>
-        </div>
-      </div>
-      <div class="filename-fields">
-        <div class="fname-field">
-          <label>Date</label>
-          <input type="text" id="fname-date" placeholder="20260313" maxlength="12" oninput="updateFilename()">
-        </div>
-        <div class="fname-field">
-          <label>Scalar / metric</label>
-          <select id="fname-scalar" onchange="updateFilename()">
-            <option value="WindSpeedRatio">WindSpeedRatio</option>
-            <option value="VR">VR</option>
-            <option value="WindSpeed">WindSpeed</option>
-            <option value="Pressure">Pressure</option>
-            <option value="Temperature">Temperature</option>
-            <option value="TurbulenceIntensity">TurbulenceIntensity</option>
-            <option value="">— custom —</option>
-          </select>
-        </div>
-        <div class="fname-field">
-          <label>Simulation type</label>
-          <select id="fname-simtype" onchange="updateFilename()">
-            <option value="PedestrianWind">PedestrianWind</option>
-            <option value="CFD">CFD</option>
-            <option value="Presentation">Presentation</option>
-            <option value="Comfort">Comfort</option>
-            <option value="">— custom —</option>
-          </select>
-        </div>
-        <div class="fname-field">
-          <label>Wind direction (°)</label>
-          <select id="fname-dir" onchange="updateFilename()">
-            <option value="">— omit —</option>
-            <option value="000">000 N</option>
-            <option value="022">022 NNE</option>
-            <option value="045">045 NE</option>
-            <option value="067">067 ENE</option>
-            <option value="090">090 E</option>
-            <option value="112">112 ESE</option>
-            <option value="135">135 SE</option>
-            <option value="157">157 SSE</option>
-            <option value="180">180 S</option>
-            <option value="202">202 SSW</option>
-            <option value="225">225 SW</option>
-            <option value="247">247 WSW</option>
-            <option value="270">270 W</option>
-            <option value="292">292 WNW</option>
-            <option value="315">315 NW</option>
-            <option value="337">337 NNW</option>
-          </select>
-        </div>
-        <div class="fname-field">
-          <label>Height (m)</label>
-          <input type="text" id="fname-height" placeholder="1.5" maxlength="6" oninput="updateFilename()">
-        </div>
-        <div class="fname-field">
-          <label>Tag / version</label>
-          <input type="text" id="fname-tag" placeholder="v1" maxlength="10" oninput="updateFilename()">
-        </div>
-      </div>
-      <div class="fname-full-row">
-        <label>Final filename (editable)</label>
-        <div class="fname-input-wrap">
-          <input type="text" id="fname-final" placeholder="filename" oninput="onFinalEdited()">
-          <button class="btn-reset-fname" onclick="rebuildFilename()">↺ Rebuild</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- STEP 3: Extract -->
@@ -736,6 +579,15 @@
 
   </div>
 
+  <!-- DEBUG LOG -->
+  <div class="card" id="debug-card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span>Debug log</span>
+      <button onclick="clearDebugLog()" style="font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface2);cursor:pointer;font-family:inherit;">Clear</button>
+    </div>
+    <div id="debug-panel">Waiting for file…</div>
+  </div>
+
 </main>
 
 <!-- SheetJS for XLSX -->
@@ -743,77 +595,27 @@
 
 <script>
 
-// ─── Filename builder ─────────────────────────────────────────────────────────
-function todayStr() {
-  const d = new Date();
-  return d.getFullYear().toString() +
-    String(d.getMonth()+1).padStart(2,'0') +
-    String(d.getDate()).padStart(2,'0');
+// ─── Debug logger ─────────────────────────────────────────────────────────────
+const _debugLines = [];
+function dlog(level, ...args) {
+  const now = new Date();
+  const ts = now.toTimeString().slice(0,8) + '.' + String(now.getMilliseconds()).padStart(3,'0');
+  const msg = args.map(a => {
+    if (a instanceof Uint8Array) return `[Uint8Array(${a.length}) ${Array.from(a.slice(0,8)).map(x=>x.toString(16).padStart(2,'0')).join(' ')}${a.length>8?'…':''}]`;
+    if (typeof a === 'object') try { return JSON.stringify(a); } catch(e) { return String(a); }
+    return String(a);
+  }).join(' ');
+  const cls = {ok:'dlog-ok', warn:'dlog-warn', err:'dlog-err', info:'dlog-info'}[level] || 'dlog-info';
+  _debugLines.push(`<span class="dlog-time">${ts}</span> <span class="${cls}">${msg}</span>`);
+  const panel = document.getElementById('debug-panel');
+  if (panel) { panel.innerHTML = _debugLines.join('<br>'); panel.scrollTop = panel.scrollHeight; }
+  const card = document.getElementById('debug-card');
+  if (card) card.classList.add('visible');
 }
-
-function buildFilenameStem() {
-  const date    = document.getElementById('fname-date').value.trim();
-  const scalar  = document.getElementById('fname-scalar').value.trim();
-  const simtype = document.getElementById('fname-simtype').value.trim();
-  const dir     = document.getElementById('fname-dir').value.trim();
-  const height  = document.getElementById('fname-height').value.trim();
-  const tag     = document.getElementById('fname-tag').value.trim();
-  const parts = [date, scalar, simtype, dir ? `${dir}deg` : '', height ? `${height}m` : '', tag]
-    .filter(Boolean);
-  return parts.join('_');
-}
-
-function updateFilename() {
-  const stem = buildFilenameStem();
-  document.getElementById('fname-final').value = stem;
-  document.getElementById('fname-preview').textContent =
-    stem ? stem + '_points.csv / .xlsx' : '—';
-}
-
-function onFinalEdited() {
-  const val = document.getElementById('fname-final').value.trim();
-  document.getElementById('fname-preview').textContent =
-    val ? val + '_points.csv / .xlsx' : '—';
-}
-
-function rebuildFilename() {
-  updateFilename();
-}
-
-function getOutputStem(fallback) {
-  const v = document.getElementById('fname-final').value.trim();
-  return v || fallback;
-}
-
-// Initialise date field on page load
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('fname-date').value = todayStr();
-  updateFilename();
-});
-
-// Also auto-detect scalar name and direction from VTP filename when file loads
-function autofillFromVTPName(fname) {
-  const base = fname.replace(/\.vtp$/i, '');
-  // Try to detect wind direction (e.g. 22_5 → 022, 225, 045 etc.)
-  const dirMatch = base.match(/_(\d{1,3}(?:_\d)?)\s*(?:deg|°|$|_)/i);
-  if (dirMatch) {
-    // normalise e.g. 22_5 → 22.5 → round to nearest 22.5° bracket
-    const raw = parseFloat(dirMatch[1].replace('_','.'));
-    const dirs = [0,22,45,67,90,112,135,157,180,202,225,247,270,292,315,337];
-    const closest = dirs.reduce((a,b) => Math.abs(b-raw)<Math.abs(a-raw)?b:a);
-    const sel = document.getElementById('fname-dir');
-    for (const opt of sel.options) {
-      if (parseInt(opt.value) === closest) { sel.value = opt.value; break; }
-    }
-  }
-  // Try to detect scalar name
-  const scalarSel = document.getElementById('fname-scalar');
-  for (const opt of scalarSel.options) {
-    if (opt.value && base.toLowerCase().includes(opt.value.toLowerCase())) {
-      scalarSel.value = opt.value; break;
-    }
-  }
-  updateFilename();
+function clearDebugLog() {
+  _debugLines.length = 0;
+  const panel = document.getElementById('debug-panel');
+  if (panel) panel.innerHTML = 'Cleared.';
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -849,32 +651,88 @@ function handleFile(file) {
   if (!file.name.toLowerCase().endsWith('.vtp')) { showNotice('parse-notice','error','⚠️ Please upload a .vtp file.'); return; }
   state.file = file;
   document.getElementById('dropzone-filename').textContent = file.name;
-  autofillFromVTPName(file.name);
   showNotice('parse-notice','info',`⏳ Reading ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)…`);
   const reader = new FileReader();
-  reader.onload = e => parseVTP(e.target.result, file.name).catch(err => {
+  reader.onload = async e => {
+    await detectDeflateMode();
+    parseVTP(e.target.result, file.name).catch(err => {
     showNotice('parse-notice','error','❌ Parse error: ' + err.message);
     console.error(err);
   });
+  };
   reader.readAsText(file);
 }
 
 // ─── Native zlib decompression via DecompressionStream ───────────────────────
-async function inflate(data) {
-  // VTK blocks are standard zlib streams (0x789c header) → use 'deflate' mode
-  const ds = new DecompressionStream('deflate');
-  const writer = ds.writable.getWriter();
-  const reader = ds.readable.getReader();
-  writer.write(data);
-  writer.close();
-  const chunks = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
+// DecompressionStream('deflate') is browser-inconsistent:
+//   Chrome / Safari → treats as zlib (RFC 1950, with 0x78xx header)
+//   Firefox (older) → treats as raw deflate (RFC 1951, no header)
+// We detect which mode the browser uses once at startup, then inflate() adapts.
+
+let _deflateMode = null; // 'zlib' | 'raw' — set by detectDeflateMode()
+
+async function detectDeflateMode() {
+  const zlibBytes = new Uint8Array([0x78,0x9c,0x63,0x00,0x00,0x00,0x01,0x00,0x01]);
+  dlog('info', 'detectDeflateMode: test stream =', zlibBytes);
+  for (const mode of ['deflate', 'deflate-raw']) {
+    const input = mode === 'deflate' ? zlibBytes : zlibBytes.slice(2, -4);
+    dlog('info', `  trying mode="${mode}" input(${input.length}B):`, input);
+    try {
+      const ds = new DecompressionStream(mode);
+      const w = ds.writable.getWriter();
+      const r = ds.readable.getReader();
+      w.write(input); w.close();
+      const chunks = [];
+      while (true) { const {done,value} = await r.read(); if(done) break; chunks.push(value); }
+      const result = chunks.reduce((a,b)=>{const c=new Uint8Array(a.length+b.length);c.set(a);c.set(b,a.length);return c;}, new Uint8Array(0));
+      dlog('info', `  mode="${mode}" → result(${result.length}B): ${result.length?result[0]:'empty'}`);
+      if (result.length === 1 && result[0] === 0) {
+        _deflateMode = mode === 'deflate' ? 'zlib' : 'raw';
+        dlog('ok', `detectDeflateMode: DETECTED mode=${_deflateMode} (using "${mode}")`);
+        return;
+      } else {
+        dlog('warn', `  mode="${mode}" gave wrong result — trying next`);
+      }
+    } catch(e) {
+      dlog('warn', `  mode="${mode}" threw: ${e.message}`);
+    }
   }
-  return concatUint8(chunks);
+  _deflateMode = 'zlib';
+  dlog('err', 'detectDeflateMode: FALLBACK to zlib (detection failed for all modes)');
 }
+
+let _inflateCallCount = 0;
+async function inflate(data) {
+  const n = ++_inflateCallCount;
+  if (n <= 3) dlog('info', `inflate[${n}]: mode=${_deflateMode} dataLen=${data.length} first4=${Array.from(data.slice(0,4)).map(x=>x.toString(16).padStart(2,'0')).join(' ')}`);
+  try {
+    if (_deflateMode === 'raw') {
+      const raw = data.slice(2, data.length - 4);
+      if (n <= 3) dlog('info', `  raw mode: passing ${raw.length}B (stripped 2+4), first4=${Array.from(raw.slice(0,4)).map(x=>x.toString(16).padStart(2,'0')).join(' ')}`);
+      const ds = new DecompressionStream('deflate-raw');
+      const w = ds.writable.getWriter(); const r = ds.readable.getReader();
+      w.write(raw); w.close();
+      const chunks = [];
+      while (true) { const {done,value} = await r.read(); if(done) break; chunks.push(value); }
+      const result = concatUint8(chunks);
+      if (n <= 3) dlog('ok', `  inflate[${n}] → ${result.length}B ✓`);
+      return result;
+    } else {
+      const ds = new DecompressionStream('deflate');
+      const w = ds.writable.getWriter(); const r = ds.readable.getReader();
+      w.write(data); w.close();
+      const chunks = [];
+      while (true) { const {done,value} = await r.read(); if(done) break; chunks.push(value); }
+      const result = concatUint8(chunks);
+      if (n <= 3) dlog('ok', `  inflate[${n}] → ${result.length}B ✓`);
+      return result;
+    }
+  } catch(e) {
+    dlog('err', `inflate[${n}] FAILED: ${e.message} | mode=${_deflateMode} dataLen=${data.length} first6=${Array.from(data.slice(0,6)).map(x=>x.toString(16).padStart(2,'0')).join(' ')}`);
+    throw e;
+  }
+}
+
 
 // ─── Base64 helpers ───────────────────────────────────────────────────────────
 // Manual base64 decoder — avoids atob() entirely (atob is strict/legacy and breaks
@@ -906,17 +764,22 @@ function b64ToUint8Array(b64) {
 }
 
 function splitBase64Streams(b64) {
-  // b64 is already whitespace-stripped.
-  // VTK sometimes stores header and data as two concatenated base64 streams.
-  // Detect by finding == padding NOT at the very end of the string.
-  const eq = b64.indexOf('==');
-  if (eq === -1 || eq >= b64.length - 2) return [b64]; // no mid-stream ==
-  // Confirm next char after == is a valid base64 character (not end of string)
-  const next = B64_LUT[b64.charCodeAt(eq + 2)];
-  if (next === 255) return [b64]; // = at end, not a split point
-  return [b64.slice(0, eq + 2), b64.slice(eq + 2)];
+  // VTK inline binary stores two concatenated base64 streams:
+  //   Stream 1: block-size header  (ends with = or == padding)
+  //   Stream 2: compressed block data (begins immediately after)
+  // Detect boundary: first = group followed by a valid base64 character.
+  // Handles single-= (1 padding byte) and ==-separated (2 padding bytes).
+  for (let i = 0; i < b64.length; i++) {
+    if (b64[i] !== '=') continue;
+    let j = i + 1;
+    while (j < b64.length && b64[j] === '=') j++; // consume all consecutive =
+    if (j < b64.length && B64_LUT[b64.charCodeAt(j)] !== 255) {
+      return [b64.slice(0, j), b64.slice(j)]; // inter-stream boundary
+    }
+    break; // = at end of string → normal EOS padding, single stream
+  }
+  return [b64];
 }
-
 function readUInt32LE(buf, off) {
   return (buf[off] | buf[off+1]<<8 | buf[off+2]<<16 | buf[off+3]<<24) >>> 0;
 }
@@ -957,7 +820,12 @@ async function decodeDataArray(da, defaultType, defaultNcomp, forceFlat=false) {
   const type   = da.getAttribute('type') || defaultType;
   const format = da.getAttribute('format') || 'binary';
   const nc     = parseInt(da.getAttribute('NumberOfComponents') || defaultNcomp || '1');
-  const rawText = da.textContent;
+  // Use only direct text nodes — da.textContent includes child element text
+  // (e.g. InformationKey children), which corrupts the base64 data.
+  const rawText = Array.from(da.childNodes)
+    .filter(n => n.nodeType === 3)
+    .map(n => n.nodeValue)
+    .join('');
 
   if (format === 'ascii') {
     const vals = rawText.trim().split(/\s+/).map(Number);
@@ -969,12 +837,14 @@ async function decodeDataArray(da, defaultType, defaultNcomp, forceFlat=false) {
   if (!text) return nc > 1 ? [] : new Float32Array(0);
 
   const streams = splitBase64Streams(text);
+  dlog('info', `  decodeDataArray: ${da.getAttribute('Name')} streams=${streams.length} lens=[${streams.map(s=>s.length).join(',')}]`);
   let bytes;
   if (streams.length === 1) {
     bytes = await decodeVTKData(b64ToUint8Array(streams[0]));
   } else {
     bytes = await decodeVTKDataSplit(b64ToUint8Array(streams[0]), b64ToUint8Array(streams[1]));
   }
+  dlog('ok', `  → ${bytes.length}B decoded for ${da.getAttribute('Name')}`);
 
   if (bytes.length === 0) return nc > 1 ? [] : new Float32Array(0);
 
@@ -1019,6 +889,7 @@ function concatUint8(arrays) {
 
 // ─── VTP Parser (async) ───────────────────────────────────────────────────────
 async function parseVTP(xmlText, fname) {
+  dlog('info', `parseVTP: ${fname} (${(xmlText.length/1024).toFixed(0)} KB text)`);
   const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
   const parseErr = doc.querySelector('parsererror');
   if (parseErr) throw new Error('XML parse error: ' + parseErr.textContent.slice(0, 100));
@@ -1028,7 +899,16 @@ async function parseVTP(xmlText, fname) {
 
   const nPoints = parseInt(piece.getAttribute('NumberOfPoints'));
   const nPolys  = parseInt(piece.getAttribute('NumberOfPolys'));
+  dlog('info', `  nPoints=${nPoints} nPolys=${nPolys}`);
 
+  // Log all DataArrays
+  for (const da of piece.querySelectorAll('DataArray')) {
+    const t = Array.from(da.childNodes).filter(n=>n.nodeType===3)
+      .map(n=>n.nodeValue).join('').replace(/\s/g,'');
+    dlog('info', `  DataArray name=${da.getAttribute('Name')} type=${da.getAttribute('type')} len=${t.length}`);
+  }
+
+  _inflateCallCount = 0;
   setProgress(10, 'Decoding points…');
   const pointsDA = piece.querySelector('Points DataArray');
   const pointsFlat = await decodeDataArray(pointsDA, 'Float32', 1, true);
